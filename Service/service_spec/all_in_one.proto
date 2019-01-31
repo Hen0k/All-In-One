@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+message All_In_One_Request {
+    string image = 1;
+    string image_type = 2;
+}
+
+message BoundingBox {
+    int32 x = 1;
+    int32 y = 2;
+    int32 w = 3;
+    int32 h = 4;
+}
+
+message All_In_One_Response {
+    repeated BoundingBox bounding_boxes = 1;
+    repeated int32 age = 2;
+    repeated string smile = 3;
+    repeated string gender = 4;
+}
+
+service All_In_One {
+    rpc classify (All_In_One_Request) returns (All_In_One_Response) {
+    }
+}

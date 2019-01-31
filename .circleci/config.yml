@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: israelabebe/all-in-one:latest
+    steps:
+      - checkout
+      - run:
+          name: install GRPC
+          command: python3.6 -m pip install grpcio grpcio-tools
+      - run:
+          name: Generate GRPC files
+          command: python3.6 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. Service/service_spec/all_in_one.proto
+      - run:
+          name: Run Tests
+          command: python3.6 -m unittest test_rpc_call.TestSuiteGrpc
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
