@@ -6,6 +6,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Get Models
+          command: cd models && chmod +x install.sh && ./install.sh
+      - run:
           name: install GRPC
           command: python3.6 -m pip install grpcio grpcio-tools
       - run:

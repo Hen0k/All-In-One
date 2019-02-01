@@ -1,3 +1,8 @@
+![SingularityNet.io](docs/assets/singnet-logo.jpg?raw=true 'SingularityNET')
+
+[![CircleCI](https://circleci.com/gh/IsraelAbebe/All-In-One.svg?style=svg)](https://circleci.com/gh/IsraelAbebe/All-In-One)
+
+
 # All-In-One
 All in one [paper](https://arxiv.org/abs/1611.00851) implementation
 ## Getting started
@@ -11,6 +16,34 @@ The project can be run by installing conda virtual environment with python=3.6 a
 * *`pip install pandas`*
 * *`pip install opencv-python`*
 * *`pip install dlib`*
+## Download pretrained model
+
+    cd models
+    ./install.sh
+
+## Setup  
+ 
+      run the following command to generate gRPC classes for Python
+      # only in Service folder run
+      $ python3.6 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. Service/service_spec/all_in_one.proto
+
+## Usage
+To run it on your own image, use the following command. Please make sure to see their paper / the code for more details.
+
+     # on project directory this will start the server 
+	   $ python  start_service.py
+    
+## Using docker with CPU
+
+You can also build an image which has only the CPU dependecies to evaluate the models provided.
+
+	     docker build --file Dockerfile . -t singnet:all_in_one_cpu
+ 
+ ## How to Use the docker image
+	
+      # this will open port 50051 and run the service 
+      docker run -it --rm -p 50051:50051 singnet:all_in_one_cpu
+
 ## How to train the model
 Three datasets are used for training the network.
   * *[AFLW dataset](https://www.tugraz.at/institute/icg/research/team-bischof/lrs/downloads/aflw/) provides a large-scale collection of annotated face images gathered from the web, exhibiting a large variety in appearance (e.g., pose, expression, ethnicity, age, gender) as well as general imaging and environmental conditions.*
