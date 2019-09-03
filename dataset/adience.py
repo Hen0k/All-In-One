@@ -6,6 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 from loggers import Log
+import csv
 
 
 class AdienceDataset(Dataset):
@@ -25,6 +26,43 @@ class AdienceDataset(Dataset):
         img.shape # (66,100)
 
     """
+
+    def clean_metadata(self):
+        # Definitions
+        files_dir = os.path.join(self.config.dataset_dir, "files")
+        files_list = os.listdir(files_dir)
+        csv_dir = os.path.join(self.config.dataset_dir,"cleaned.csv")
+        # Clear the csv file
+        open(csv_dir, "w").close()
+
+        all_lines = []
+        for path in files_list:
+            # Join the paths to get the file
+            path = os.path.join(files_dir, path)
+            lines = []
+            
+            # Open the .txt files and read their contents 
+            with open(path, 'r') as fd:
+                for line in fd.readlines():
+                    line = line.split('\t')
+                    # Figuer out the indexs for the attributes i need
+                    if line[3]!="None":
+                        age = line[3].split(",")
+                        if len(age)==1:
+                            line = [line[0] + "," + line[1] + "," + age[0] + "\n"]
+                        else:
+                            line = [line[0] + "," + line[1] + "," + age[0]+" "+age[1] + "\n"]
+                        lines += line
+            # Remove the first line
+            lines.__delitem__(0)
+            all_lines += lines
+            
+        # make a .csv file and write out to it
+        with open(csv_dir, "a") as csv_fd:
+            for line in all_lines:
+                csv_fd.write(line)
+
+        
 
     def resize_down_image(self,img,max_img_shape):
         img_h,img_w = img.shape[0:2]
@@ -146,6 +184,52 @@ class AdienceDataset(Dataset):
                 Log.DEBUG_OUT = True
                 Log.DEBUG("Loaded all dataset and images")
                 Log.DEBUG_OUT =False
+        
+        elif (self.config.label == "age"):
+                if not self.contain_dataset_files():
+                    self.clean_metadata()
+                    self.meet_convention()
+                Log.DEBUG_OUT = True
+                Log.DEBUG("Loading pickle files")
+                Log.DEBUG_OUT =False
+                self.train_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"train.pkl"))
+                self.test_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"test.pkl"))
+                if os.path.exists(os.path.join(self.config.dataset_dir,"validation.pkl")):
+                    self.validation_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"validation.pkl"))
+                else:
+                    self.validation_dataset = None
+                    frameinfo = getframeinfo(currentframe())
+                    Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
+                self.train_dataset = self.fix_labeling_issue(self.train_dataset)
+                self.test_dataset = self.fix_labeling_issue(self.test_dataset)
+                self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
+                Log.DEBUG_OUT = True
+                Log.DEBUG("Loaded train, test and validation dataset")
+                Log.DEBUG_OUT =False
+                test_indexes = np.arange(len(self.test_dataset))
+                np.random.shuffle(test_indexes)
+                validation_indexes = np.arange(len(self.validation_dataset))
+                np.random.shuffle(validation_indexes)
+
+                self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
+                self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
+
+                self.test_dataset = self.test_dataset[:1000]
+                self.validation_dataset = self.validation_dataset[:100]
+                Log.DEBUG_OUT = True
+                Log.DEBUG("Loading test images")
+                Log.DEBUG_OUT =False
+                self.test_dataset_images = self.load_images(self.test_dataset).astype(np.float32)/255
+                Log.DEBUG_OUT = True
+                Log.DEBUG("Loading validation images")
+                Log.DEBUG_OUT =False
+                self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
+                self.test_detection = self.test_dataset["age"].as_matrix()
+                self.dataset_loaded = True
+                Log.DEBUG_OUT = True
+                Log.DEBUG("Loaded all dataset and images")
+                Log.DEBUG_OUT =False
+
         else:
             raise NotImplementedError("Not implemented for labels:"+str(self.labels))
 
@@ -180,6 +264,20 @@ class AdienceDataset(Dataset):
                 smile = np.eye(2)[smile]
                 yield X,smile
 
+    def age_data_generator(self, batch_size=32):
+        while True:
+            indexes = np.arange(len(self.train_dataset))
+            np.random.shuffle(indexes)
+            for i in range(0,len(indexes)-batch_size,batch_size):
+                current_indexes = indexes[i:i+batch_size]
+                current_dataframe = self.train_dataset.iloc[current_indexes].reset_index(drop=True)
+                current_images = self.load_images(current_dataframe)
+                X = current_images.astype(np.float32)/255
+                X = X.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
+                age = self.get_column(current_dataframe,"age").astype(str)
+                # Maybe do a list return instead of a string
+                yield X,age
+
     def load_images(self,dataframe):
         output_images = np.zeros((len(dataframe),self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2]))
         for index,row in dataframe.iterrows():
@@ -204,12 +302,33 @@ class AdienceDataset(Dataset):
             test.to_pickle(os.path.join(self.config.dataset_dir,"test.pkl"))
             validation.to_pickle(os.path.join(self.config.dataset_dir,"validation.pkl"))
         else:
-            dataframe = self.load_face_non_face_dataset()
+            if self.config.label.lower()=="age":
+                # self.clean_metadata()
+                dataframe = self.load_age_dataset()
+            else:
+                dataframe = self.load_face_non_face_dataset()
+
             train,test,validation = self.split_train_test_validation(dataframe)
             train.to_pickle(os.path.join(self.config.dataset_dir,"train.pkl"))
             test.to_pickle(os.path.join(self.config.dataset_dir,"test.pkl"))
             validation.to_pickle(os.path.join(self.config.dataset_dir,"validation.pkl"))
             dataframe.to_pickle(os.path.join(self.config.dataset_dir,"all.pkl"))
+
+    def load_age_dataset(self):
+        file_locations = []
+        age_lable = []
+        csv_dir = os.path.join(self.config.dataset_dir, "cleaned.csv")
+        with open(csv_dir, 'r') as fd:
+            for line in fd.readlines():
+                print(line)
+                line = line.split(',')
+                file_locations += [os.path.join(line[0], line[1])]
+                age_lable += [line[2]]
+
+        output_df = pd.DataFrame(columns=["file_location","age"])
+        output_df["file_location"] = file_locations
+        output_df["age"] = age_lable
+        return output_df
 
     def load_face_non_face_dataset(self):
         output_file_locations = []
