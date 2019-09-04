@@ -123,7 +123,7 @@ class AflwDataset(Dataset):
                 yield X,detection
 
     def load_images(self,dataframe):
-        output_images = np.zeros((len(dataframe),self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2]))
+        output_images = np.zeros((len(dataframe), self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2]))
         for index,row in dataframe.iterrows():
             file_location = row["file_location"]
             img = cv2.imread(file_location)

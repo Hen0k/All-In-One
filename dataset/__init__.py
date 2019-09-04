@@ -115,7 +115,7 @@ class Dataset(object):
         if not os.path.exists(os.path.join(self.config.dataset_dir,"test.pkl")):
             print ("Failed to meet convention","test.pkl is not inside:"+self.config.dataset_dir)
             return False
-        return True;
+        return True
     @abstractmethod
     def meet_convention(self):
         raise NotImplementedError("Not implmented")
@@ -141,9 +141,9 @@ class Dataset(object):
         if dataframe is None:
             return None
         elif column in dataframe.columns:
-            return dataframe[column].as_matrix()
+            return dataframe[column].values
         else:
-            raise KeyError("dataframe does not contain column '"+label+"'")
+            raise KeyError("dataframe does not contain column '"+column+"'")
     @abstractmethod
     def get_dataset_name(self):
         pass

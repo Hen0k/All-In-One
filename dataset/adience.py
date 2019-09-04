@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 from loggers import Log
 import csv
+import scipy
+from scipy.special import softmax
+from scipy.stats import norm
 
 
 class AdienceDataset(Dataset):
@@ -15,7 +18,7 @@ class AdienceDataset(Dataset):
 
     def __init__(self,config):
         # self.conn = sqlite3.connect("/home/mtk/dataset/aflw-files/aflw/data/aflw.sqlite")
-        super(AdienceDataset,self).__init__(config)
+        super(AdienceDataset, self).__init__(config)
 
     """ method that resizes image to the same resolution
     image which have width and height equal or less than
@@ -46,12 +49,13 @@ class AdienceDataset(Dataset):
                 for line in fd.readlines():
                     line = line.split('\t')
                     # Figuer out the indexs for the attributes i need
-                    if line[3]!="None":
+                    if line[3] != "None":
                         age = line[3].split(",")
-                        if len(age)==1:
-                            line = [line[0] + "," + line[1] + "," + age[0] + "\n"]
+                        name = "coarse_tilt_aligned_face." + line[2] + "." + line[1]
+                        if len(age) == 1:
+                            line = [line[0] + ","+ name  + "," + age[0] + '\n']
                         else:
-                            line = [line[0] + "," + line[1] + "," + age[0]+" "+age[1] + "\n"]
+                            line = [line[0] + "," + name + "," + age[0] +" "+ age[1] + '\n']
                         lines += line
             # Remove the first line
             lines.__delitem__(0)
@@ -62,7 +66,32 @@ class AdienceDataset(Dataset):
             for line in all_lines:
                 csv_fd.write(line)
 
-        
+    
+    def encode_age(self, start, end=None):
+        MAX_AGE = 128
+    
+        if end==None:
+            return np.array([1] * start + [0] * (MAX_AGE-start))
+
+        age_range = range(start, end+1)
+        encoded = []
+        # Encode and 
+        for num in age_range:
+            encoded.append(np.array([1] * num + [0] * (MAX_AGE-num)))
+        # Get mean and std
+        mean = scipy.mean(age_range)
+        std = scipy.std(age_range)
+        # Calculate norm
+        rv = norm(loc=mean, scale=std)
+        # Get PDF for each value
+        pdf_values = [rv.pdf(num) for num in age_range]
+        # Calclate softmax
+        arr_softmax = softmax(pdf_values).reshape(len(age_range), 1)
+        # Multiply with encoding
+        array = arr_softmax * encoded
+        # take the sum along the 0 axis
+        array = array.sum(0)
+        return array
 
     def resize_down_image(self,img,max_img_shape):
         img_h,img_w = img.shape[0:2]
@@ -135,7 +164,7 @@ class AdienceDataset(Dataset):
             Log.DEBUG("Loading validation images")
             Log.DEBUG_OUT =False
             self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
-            self.test_detection = self.test_dataset["is_face"].as_matrix()
+            self.test_detection = self.test_dataset["is_face"].values
             self.dataset_loaded = True
             Log.DEBUG_OUT = True
             Log.DEBUG("Loaded all dataset and images")
@@ -179,7 +208,7 @@ class AdienceDataset(Dataset):
                 Log.DEBUG("Loading validation images")
                 Log.DEBUG_OUT =False
                 self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
-                self.test_detection = self.test_dataset["is_face"].as_matrix()
+                self.test_detection = self.test_dataset["is_face"].values
                 self.dataset_loaded = True
                 Log.DEBUG_OUT = True
                 Log.DEBUG("Loaded all dataset and images")
@@ -224,7 +253,7 @@ class AdienceDataset(Dataset):
                 Log.DEBUG("Loading validation images")
                 Log.DEBUG_OUT =False
                 self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
-                self.test_detection = self.test_dataset["age"].as_matrix()
+                self.test_detection = self.test_dataset["age"].values
                 self.dataset_loaded = True
                 Log.DEBUG_OUT = True
                 Log.DEBUG("Loaded all dataset and images")
@@ -274,15 +303,19 @@ class AdienceDataset(Dataset):
                 current_images = self.load_images(current_dataframe)
                 X = current_images.astype(np.float32)/255
                 X = X.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
-                age = self.get_column(current_dataframe,"age").astype(str)
+                # age = self.get_column(current_dataframe,"age").astype(str)
+                age = self.get_column(current_dataframe,"age")#.astype(np.dtype)
                 # Maybe do a list return instead of a string
                 yield X,age
 
     def load_images(self,dataframe):
         output_images = np.zeros((len(dataframe),self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2]))
+        imgs_folder = os.path.join(self.config.dataset_dir, "faces")
         for index,row in dataframe.iterrows():
-            file_location = row["file_location"]
+            file_location = os.path.join(imgs_folder, row["file_location"])
+            # file_location = row["file_location"]
             img = cv2.imread(file_location)
+
             if img is None:
                 print("Unable to read image from ",file_location)
                 continue
@@ -320,11 +353,20 @@ class AdienceDataset(Dataset):
         csv_dir = os.path.join(self.config.dataset_dir, "cleaned.csv")
         with open(csv_dir, 'r') as fd:
             for line in fd.readlines():
-                print(line)
                 line = line.split(',')
                 file_locations += [os.path.join(line[0], line[1])]
-                age_lable += [line[2]]
-
+                line[2] = line[2].strip()
+                splited = line[2].split(' ')
+                
+                if len(splited)>1:
+                    splited = [int(splited[0].split('(')[1]),
+                            int(splited[-1].split(')')[0])]
+                    encoded = self.encode_age(splited[0], splited[1])
+                    age_lable += [encoded]
+                else:
+                    encoded = self.encode_age(int(line[2]))
+                    age_lable += [encoded]
+        
         output_df = pd.DataFrame(columns=["file_location","age"])
         output_df["file_location"] = file_locations
         output_df["age"] = age_lable
