@@ -1,5 +1,7 @@
-from keras.layers import Layer
+from keras.layers import Layer, Dense
 from keras import backend as K
+from nets.loss_functions import ordlinal_loss, ordinal_activation
+import tensorflow as tf
 
 class RoundLayer(Layer):
     def __init__(self, **kwargs):
@@ -13,3 +15,14 @@ class RoundLayer(Layer):
         config = {"name": self.__class__.__name__}
         base_config = super(RoundLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+class AgeBinaryClassifiers(Layer):
+    def __init__(self, **kwargs):
+        super(AgeBinaryClassifiers, self).__init__(**kwargs)
+    def call(self, layer_input):
+        arr = tf.constant_initializer()
+        for i in range(128):
+            tf.concat([arr, Dense(1, activation=ordinal_activation(i, layer_input))(layer_input)], 1)
+        return arr   
+        

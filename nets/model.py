@@ -1,17 +1,17 @@
 
 import keras
 
-from keras.layers import Input,Conv2D,MaxPooling2D,Dropout,Dense,Flatten,concatenate,Layer
+from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Dense,Flatten,concatenate,Layer
 from keras.layers.normalization import  BatchNormalization
 from keras.models import Model
 from keras import backend as K
-
+# import tensorflow as tf
 from sklearn.model_selection import train_test_split
 import json
-from nets.layers import RoundLayer
+from nets.layers import RoundLayer, AgeBinaryClassifiers
 
 class AllInOneModel(object):
-    def __init__(self,input_shape):
+    def __init__(self, input_shape):
         self.is_built = False
         self.input_shape = input_shape
         self.model = self.build()
@@ -61,9 +61,10 @@ class AllInOneModel(object):
         age_estimation1 = Dense(1024,activation="relu")(conv6_out_pool_flatten)
         age_drop1 = Dropout(0.2)(age_estimation1)
         age_estimation2 = Dense(128,activation="relu")(age_drop1)
-        age_drop2  = Dropout(0.2)(age_estimation2)
-        age_estimation3 = Dense(1,activation="linear")(age_drop2)
-        age_estimation4 = RoundLayer(name="age_estimation")(age_estimation3)
+        age_drop2 = Dropout(0.2)(age_estimation2)
+        age_estimation3 = Dense(1, activation="linear", name="age_estimation")(age_drop2)
+        # age_estimation3 = AgeBinaryClassifiers().call(age_drop2)
+        # age_estimation4 = RoundLayer(name="age_estimation")(age_estimation3)
         # gender probablity
 
         gender_probablity1 = Dense(1024,activation="relu")(conv6_out_pool_flatten)
@@ -118,11 +119,11 @@ class AllInOneModel(object):
 
         model = Model(inputs=input_layer,
                         outputs=[detection_probability2,key_point_visibility_2, key_points2,pose2,smile2,
-                                gender_probablity3,age_estimation4,face_reco,young_3,eye_glasses2,
+                                gender_probablity3, age_estimation3, face_reco,young_3,eye_glasses2,
                                 mouse_slightly_open2
                                 ])
 
-        self.is_built = True;
+        self.is_built = True
         return model
 
     def save_model_to_json(self,path):

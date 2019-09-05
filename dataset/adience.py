@@ -10,6 +10,7 @@ import csv
 import scipy
 from scipy.special import softmax
 from scipy.stats import norm
+import tensorflow as tf
 
 
 class AdienceDataset(Dataset):
@@ -91,6 +92,8 @@ class AdienceDataset(Dataset):
         array = arr_softmax * encoded
         # take the sum along the 0 axis
         array = array.sum(0)
+        # Convert to a Tensor
+        array = tf.constant(array)
         return array
 
     def resize_down_image(self,img,max_img_shape):
@@ -171,101 +174,101 @@ class AdienceDataset(Dataset):
             Log.DEBUG_OUT =False
 
         elif (self.config.label == "pose"):
-                if not self.contain_dataset_files():
-                    self.meet_convention()
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading pickle files")
-                Log.DEBUG_OUT =False
-                self.train_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"train.pkl"))
-                self.test_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"test.pkl"))
-                if os.path.exists(os.path.join(self.config.dataset_dir,"validation.pkl")):
-                    self.validation_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"validation.pkl"))
-                else:
-                    self.validation_dataset = None
-                    frameinfo = getframeinfo(currentframe())
-                    Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
-                self.train_dataset = self.fix_labeling_issue(self.train_dataset)
-                self.test_dataset = self.fix_labeling_issue(self.test_dataset)
-                self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loaded train, test and validation dataset")
-                Log.DEBUG_OUT =False
-                test_indexes = np.arange(len(self.test_dataset))
-                np.random.shuffle(test_indexes)
-                validation_indexes = np.arange(len(self.validation_dataset))
-                np.random.shuffle(validation_indexes)
+            if not self.contain_dataset_files():
+                self.meet_convention()
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading pickle files")
+            Log.DEBUG_OUT =False
+            self.train_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"train.pkl"))
+            self.test_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"test.pkl"))
+            if os.path.exists(os.path.join(self.config.dataset_dir,"validation.pkl")):
+                self.validation_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"validation.pkl"))
+            else:
+                self.validation_dataset = None
+                frameinfo = getframeinfo(currentframe())
+                Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
+            self.train_dataset = self.fix_labeling_issue(self.train_dataset)
+            self.test_dataset = self.fix_labeling_issue(self.test_dataset)
+            self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loaded train, test and validation dataset")
+            Log.DEBUG_OUT =False
+            test_indexes = np.arange(len(self.test_dataset))
+            np.random.shuffle(test_indexes)
+            validation_indexes = np.arange(len(self.validation_dataset))
+            np.random.shuffle(validation_indexes)
 
-                self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
-                self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
+            self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
+            self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
 
-                self.test_dataset = self.test_dataset[:1000]
-                self.validation_dataset = self.validation_dataset[:100]
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading test images")
-                Log.DEBUG_OUT =False
-                self.test_dataset_images = self.load_images(self.test_dataset).astype(np.float32)/255
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading validation images")
-                Log.DEBUG_OUT =False
-                self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
-                self.test_detection = self.test_dataset["is_face"].values
-                self.dataset_loaded = True
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loaded all dataset and images")
-                Log.DEBUG_OUT =False
+            self.test_dataset = self.test_dataset[:1000]
+            self.validation_dataset = self.validation_dataset[:100]
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading test images")
+            Log.DEBUG_OUT =False
+            self.test_dataset_images = self.load_images(self.test_dataset).astype(np.float32)/255
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading validation images")
+            Log.DEBUG_OUT =False
+            self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
+            self.test_detection = self.test_dataset["is_face"].values
+            self.dataset_loaded = True
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loaded all dataset and images")
+            Log.DEBUG_OUT =False
         
         elif (self.config.label == "age"):
-                if not self.contain_dataset_files():
-                    self.clean_metadata()
-                    self.meet_convention()
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading pickle files")
-                Log.DEBUG_OUT =False
-                self.train_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"train.pkl"))
-                self.test_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"test.pkl"))
-                if os.path.exists(os.path.join(self.config.dataset_dir,"validation.pkl")):
-                    self.validation_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"validation.pkl"))
-                else:
-                    self.validation_dataset = None
-                    frameinfo = getframeinfo(currentframe())
-                    Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
-                self.train_dataset = self.fix_labeling_issue(self.train_dataset)
-                self.test_dataset = self.fix_labeling_issue(self.test_dataset)
-                self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loaded train, test and validation dataset")
-                Log.DEBUG_OUT =False
-                test_indexes = np.arange(len(self.test_dataset))
-                np.random.shuffle(test_indexes)
-                validation_indexes = np.arange(len(self.validation_dataset))
-                np.random.shuffle(validation_indexes)
+            if not self.contain_dataset_files():
+                self.clean_metadata()
+                self.meet_convention()
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading pickle files")
+            Log.DEBUG_OUT =False
+            self.train_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"train.pkl"))
+            self.test_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"test.pkl"))
+            if os.path.exists(os.path.join(self.config.dataset_dir,"validation.pkl")):
+                self.validation_dataset = self.get_meta(os.path.join(self.config.dataset_dir,"validation.pkl"))
+            else:
+                self.validation_dataset = None
+                frameinfo = getframeinfo(currentframe())
+                Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
+            self.train_dataset = self.fix_labeling_issue(self.train_dataset)
+            self.test_dataset = self.fix_labeling_issue(self.test_dataset)
+            self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loaded train, test and validation dataset")
+            Log.DEBUG_OUT =False
+            test_indexes = np.arange(len(self.test_dataset))
+            np.random.shuffle(test_indexes)
+            validation_indexes = np.arange(len(self.validation_dataset))
+            np.random.shuffle(validation_indexes)
 
-                self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
-                self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
+            self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
+            self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
 
-                self.test_dataset = self.test_dataset[:1000]
-                self.validation_dataset = self.validation_dataset[:100]
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading test images")
-                Log.DEBUG_OUT =False
-                self.test_dataset_images = self.load_images(self.test_dataset).astype(np.float32)/255
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loading validation images")
-                Log.DEBUG_OUT =False
-                self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
-                self.test_detection = self.test_dataset["age"].values
-                self.dataset_loaded = True
-                Log.DEBUG_OUT = True
-                Log.DEBUG("Loaded all dataset and images")
-                Log.DEBUG_OUT =False
+            self.test_dataset = self.test_dataset[:1000]
+            self.validation_dataset = self.validation_dataset[:100]
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading test images")
+            Log.DEBUG_OUT =False
+            self.test_dataset_images = self.load_images(self.test_dataset).astype(np.float32)/255
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loading validation images")
+            Log.DEBUG_OUT =False
+            self.validation_dataset_images = self.load_images(self.validation_dataset).astype(np.float32)/255
+            self.test_detection = self.test_dataset["age"].values
+            self.dataset_loaded = True
+            Log.DEBUG_OUT = True
+            Log.DEBUG("Loaded all dataset and images")
+            Log.DEBUG_OUT =False
 
         else:
             raise NotImplementedError("Not implemented for labels:"+str(self.labels))
 
-    def generator(self,batch_size):
+    def generator(self, batch_size):
         raise NotImplementedError("Not implmented!")
 
-    def detection_data_genenerator(self,batch_size):
+    def detection_data_genenerator(self, batch_size):
         while True:
             indexes = np.arange(len(self.train_dataset))
             np.random.shuffle(indexes)
@@ -274,8 +277,8 @@ class AdienceDataset(Dataset):
                 current_dataframe = self.train_dataset.iloc[current_indexes].reset_index(drop=True)
                 current_images = self.load_images(current_dataframe)
                 X = current_images.astype(np.float32)/255
-                X = X.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
-                detection = self.get_column(current_dataframe,"is_face").astype(np.uint8)
+                X = X.reshape(-1, self.config.image_shape[0], self.config.image_shape[1], self.config.image_shape[2])
+                detection = self.get_column(current_dataframe, "is_face").astype(np.uint8)
                 detection = np.eye(2)[detection]
                 yield X,detection
 

@@ -14,7 +14,7 @@ class CustomModelCheckPoint(keras.callbacks.Callback):
         super(CustomModelCheckPoint,self).__init__(**kargs)
         self.last_loss = 1000000000
         self.last_accuracy = 0
-        self.current_model_number = 0;
+        self.current_model_number = 0
         self.epoch_number = 0
 
 
@@ -30,7 +30,7 @@ class CustomModelCheckPoint(keras.callbacks.Callback):
         if (self.last_loss-current_val_loss) > 0.01:
             current_weights_name = "weights"+str(self.current_model_number)+".h5"
             print(" loss improved from "+str(self.last_loss)+" to "+str(current_val_loss)+", Saving model to "+current_weights_name)
-            self.model.save_weights("models/"+current_weights_name);
+            self.model.save_weights("models/"+current_weights_name)
             self.model.save_weights("models/last_weight.h5")
             self.current_model_number+=1
             self.last_loss = current_val_loss
