@@ -323,8 +323,9 @@ class AdienceDataset(Dataset):
                 print("Unable to read image from ",file_location)
                 continue
             img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            #img = cv2.resize(img,(self.config.image_shape[0],self.config.image_shape[1]))
-            img = scipy.misc.imresize(img, (self.config.image_shape[0], self.config.image_shape[1])).astype(np.float32)/255
+            img = cv2.resize(img,(self.config.image_shape[0],self.config.image_shape[1]))
+            # img = np.array(Image.fromarray(img).resize(self.config.image_shape[0], self.config.image_shape[1])).astype(np.float32)/255
+            # img = scipy.misc.imresize(img, (self.config.image_shape[0], self.config.image_shape[1])).astype(np.float32)/255
             output_images[index] = img.reshape(self.config.image_shape)
         return output_images
 

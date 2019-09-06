@@ -143,16 +143,21 @@ class AllInOneNetwork(object):
         X_test = dataset.test_dataset_images
         X_test = X_test.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
         age_test = dataset.test_dataset["age"].as_matrix()
-        age_model.compile(loss = age_loss, optimizer=keras.optimizers.Adam(self.config.getLearningRate()),metrics=["accuracy"])
-        callbacks = [LambdaUpdateCallBack()]
+        age_model.compile(loss=age_loss, 
+                            optimizer=keras.optimizers.Adam(self.config.getLearningRate()), 
+                            metrics=["accuracy"])
+        # callbacks = [LambdaUpdateCallBack()]
         age_model.summary()
+        X_test = np.array(X_test, dtype=object)
+        age_test = np.array(age_test, dtype=object)
+
         age_model.fit_generator(dataset.age_data_generator(self.config.batch_size),
                 epochs = self.config.epochs,
                 steps_per_epoch = self.config.steps_per_epoch,
-                validation_data = [X_test,age_test],
-                callbacks = callbacks
+                # validation_data = [X_test, age_test]
+                # callbacks = callbacks
         )
-        score = age_model.evaluate(X_test,age_test)
+        score = age_model.evaluate(X_test, age_test)
         self.save_model(age_model,score)
 
 
