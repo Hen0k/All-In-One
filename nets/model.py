@@ -62,8 +62,8 @@ class AllInOneModel(object):
         age_drop1 = Dropout(0.2)(age_estimation1)
         age_estimation2 = Dense(128,activation="relu")(age_drop1)
         age_drop2 = Dropout(0.2)(age_estimation2)
-        age_estimation3 = Dense(1, activation="linear", name="age_estimation")(age_drop2)
-        # age_estimation3 = AgeBinaryClassifiers().call(age_drop2)
+        # age_estimation3 = Dense(1, activation="linear", name="age_estimation")(age_drop2)
+        age_estimation3 = AgeBinaryClassifiers(128, name="age_estimation")(age_drop2)
         # age_estimation4 = RoundLayer(name="age_estimation")(age_estimation3)
         # gender probablity
 
@@ -136,7 +136,7 @@ class AllInOneModel(object):
         for layer in self.model.layers:
             if layer.name == name:
                 return layer
-        raise Exception("Layer with name "+name + " does not exist")
+        raise Exception("Layer with name "+ name + " does not exist")
     """Get model which have output layer given by labels.
     Parameters
     ----------
@@ -148,7 +148,7 @@ class AllInOneModel(object):
 
     """
 
-    def get_model_with_labels(self,labels):
+    def get_model_with_labels(self, labels):
         all_lists = ["detection_probablity","kpoints_visibility","key_points","pose","smile",
             "gender_probablity","age_estimation","face_reco","is_young","eye_glasses",
             "mouse_slightly_open"]

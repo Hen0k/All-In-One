@@ -93,7 +93,7 @@ class AdienceDataset(Dataset):
         # take the sum along the 0 axis
         array = array.sum(0)
         # Convert to a Tensor
-        array = tf.constant(array)
+        array = tf.convert_to_tensor(array,dtype=tf.float32)
         return array
 
     def resize_down_image(self,img,max_img_shape):

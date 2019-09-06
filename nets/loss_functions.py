@@ -18,15 +18,25 @@ def relative_mse_loss(y_true,y_pred):
 def ordlinal_loss(y_true, y_pred):
     return np.absolute(y_true - y_pred)
 
+def encode(num):
+    return np.array([1] * num + [0] * (128 - num), dtype=float)
+
 def ordinal_activation(order, y_pred):
     order = encode(order)
+    y_pred = tf.cast(y_pred, tf.float64)
+    order = tf.cast(order, tf.float64)
+
+    return tf.less(tf.reduce_sum(order),
+                 tf.reduce_sum(y_pred))
+    # print(y_pred.dtype)
+    # print(order.dtype)
+
+    # exit(0)
     # if tf.less(tf.reduce_sum(y_pred), tf.reduce_sum(order)):
-    tv = 0
-    tf.cond(tf.reduce_sum(order) >= tf.reduce_sum(y_pred), lambda: 1, lambda: 0)
+    # tv = 0
+    
+    
     #     return 1
     # else:
     #     return 0
     # return tv
-
-def encode(num):
-    return tf.constant([1] * num + [0] * (128 - num), dtype=float)

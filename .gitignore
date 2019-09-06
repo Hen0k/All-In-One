@@ -6,3 +6,8 @@ logs.txt
 epoch_number.json
 temp-models/*
 .idea/*
+.pylintrc
+.vscode/*
+Service/service_spec/all_in_one_pb2.py
+Service/service_spec/all_in_one_pb2_grpc.py
+cleaned.csv
