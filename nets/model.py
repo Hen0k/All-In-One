@@ -56,14 +56,17 @@ class AllInOneModel(object):
 
         #subject dependant layers
         conv6_out_pool = MaxPooling2D(pool_size=(2, 2))(conv6)
-        conv6_out_pool_flatten = Flatten()(conv6_out_pool)
+        nin_conv = Conv2D(128,kernel_size=(1,1),strides=(1, 1),activation="relu")(conv6_out_pool)
+        conv7 = Conv2D(128,kernel_size=(5, 5),strides=(1, 1),activation="relu")(nin_conv)
+
+        conv6_out_pool_flatten = Flatten()(conv7)
         # age estimation layers
-        age_estimation1 = Dense(1024,activation="relu")(conv6_out_pool_flatten)
-        age_drop1 = Dropout(0.2)(age_estimation1)
-        age_estimation2 = Dense(128,activation="relu")(age_drop1)
-        age_drop2 = Dropout(0.2)(age_estimation2)
+        # age_estimation1 = Dense(1024,activation="relu")(conv6_out_pool_flatten)
+        # age_drop1 = Dropout(0.2)(age_estimation1)
+        age_estimation2 = Dense(128,activation="relu")(conv6_out_pool_flatten)
+        # age_drop2 = Dropout(0.2)(age_estimation2)
         # age_estimation3 = Dense(1, activation="linear", name="age_estimation")(age_drop2)
-        age_estimation3 = AgeBinaryClassifiers(128, name="age_estimation")(age_drop2)
+        age_estimation3 = AgeBinaryClassifiers(128, name="age_estimation")(age_estimation2)
         # age_estimation4 = RoundLayer(name="age_estimation")(age_estimation3)
         # gender probablity
 

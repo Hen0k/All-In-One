@@ -18,7 +18,7 @@ from loggers import Log
 from nets.model import AllInOneModel
 from   util import DatasetType
 from nets.callbacks import LambdaUpdateCallBack,CustomModelCheckPoint
-from nets.loss_functions import age_loss
+from nets.loss_functions import occ
 
 
 class AllInOneNetwork(object):
@@ -143,18 +143,23 @@ class AllInOneNetwork(object):
         X_test = dataset.test_dataset_images
         X_test = X_test.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
         age_test = dataset.test_dataset["age"].as_matrix()
-        age_model.compile(loss=age_loss, 
+        age_model.compile(loss=occ, 
                             optimizer=keras.optimizers.Adam(self.config.getLearningRate()), 
                             metrics=["accuracy"])
         # callbacks = [LambdaUpdateCallBack()]
         age_model.summary()
-        X_test = np.array(X_test, dtype=object)
-        age_test = np.array(age_test, dtype=object)
-
+        # X_test = np.array(X_test, dtype='float32')
+        # age_test = np.array(age_test, dtype='float32')
+        print(X_test.shape)
+        print(age_test.shape)
+        print(self.config.steps_per_epoch)
+        # exit(0)
         age_model.fit_generator(dataset.age_data_generator(self.config.batch_size),
-                epochs = self.config.epochs,
-                steps_per_epoch = self.config.steps_per_epoch,
-                # validation_data = [X_test, age_test]
+                epochs=self.config.epochs,
+                steps_per_epoch=self.config.steps_per_epoch,
+                validation_data=dataset.age_val_generator(self.config.batch_size),
+                #validation_data=[X_test, age_test],
+                validation_steps=15
                 # callbacks = callbacks
         )
         score = age_model.evaluate(X_test, age_test)

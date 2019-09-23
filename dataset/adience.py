@@ -35,7 +35,7 @@ class AdienceDataset(Dataset):
         # Definitions
         files_dir = os.path.join(self.config.dataset_dir, "files")
         files_list = os.listdir(files_dir)
-        csv_dir = os.path.join(self.config.dataset_dir,"cleaned.csv")
+        csv_dir = os.path.join(self.config.dataset_dir, "cleaned.csv")
         # Clear the csv file
         open(csv_dir, "w").close()
 
@@ -71,7 +71,7 @@ class AdienceDataset(Dataset):
     def encode_age(self, start, end=None):
         MAX_AGE = 128
     
-        if end==None:
+        if end == None:
             return np.array([1] * start + [0] * (MAX_AGE-start))
 
         age_range = range(start, end+1)
@@ -91,7 +91,7 @@ class AdienceDataset(Dataset):
         # Multiply with encoding
         array = arr_softmax * encoded
         # take the sum along the 0 axis
-        array = array.sum(0)
+        # array = array.sum(0)
         # Convert to a Tensor
         array = tf.convert_to_tensor(array,dtype=tf.float32)
         return array
@@ -231,7 +231,7 @@ class AdienceDataset(Dataset):
             else:
                 self.validation_dataset = None
                 frameinfo = getframeinfo(currentframe())
-                Log.WARNING("Unable to find validation dataset",file_name=__name__,line_number=frameinfo.lineno)
+                Log.WARNING("Unable to find validation dataset",file_name=name ,line_number=frameinfo.lineno)
             self.train_dataset = self.fix_labeling_issue(self.train_dataset)
             self.test_dataset = self.fix_labeling_issue(self.test_dataset)
             self.validation_dataset = self.fix_labeling_issue(self.validation_dataset)
@@ -304,10 +304,28 @@ class AdienceDataset(Dataset):
                 current_indexes = indexes[i:i+batch_size]
                 current_dataframe = self.train_dataset.iloc[current_indexes].reset_index(drop=True)
                 current_images = self.load_images(current_dataframe)
-                X = current_images.astype(np.float32)/255
+                X = np.array(current_images.tolist(), dtype=np.float32)/255
                 X = X.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
+
                 # age = self.get_column(current_dataframe,"age").astype(str)
-                age = self.get_column(current_dataframe,"age")#.astype(np.dtype)
+                age = np.array(self.get_column(current_dataframe,"age").tolist())
+
+                # Maybe do a list return instead of a string
+                yield X,age
+    def age_val_generator(self, batch_size=32):
+        while True:
+            indexes = np.arange(len(self.validation_dataset))
+            np.random.shuffle(indexes)
+            for i in range(0,len(indexes)-batch_size,batch_size):
+                current_indexes = indexes[i:i+batch_size]
+                current_dataframe = self.validation_dataset.iloc[current_indexes].reset_index(drop=True)
+                current_images = self.load_images(current_dataframe)
+                X = np.array(current_images.tolist(), dtype=np.float32)/255
+                X = X.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
+
+                # age = self.get_column(current_dataframe,"age").astype(str)
+                age = np.array(self.get_column(current_dataframe,"age").tolist())
+
                 # Maybe do a list return instead of a string
                 yield X,age
 
