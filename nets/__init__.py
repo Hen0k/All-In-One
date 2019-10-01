@@ -2,7 +2,7 @@
 import keras
 
 from keras import backend as K
-
+from keras.models import model_from_json
 import numpy as np
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -17,9 +17,8 @@ import os
 from loggers import Log
 from nets.model import AllInOneModel
 from   util import DatasetType
-from nets.callbacks import LambdaUpdateCallBack,CustomModelCheckPoint
+from nets.callbacks import LambdaUpdateCallBack, CustomModelCheckPoint, SaveCallBack
 from nets.loss_functions import occ
-
 
 class AllInOneNetwork(object):
     def __init__(self,config):
@@ -64,10 +63,10 @@ class AllInOneNetwork(object):
         if not self.dataset.dataset_loaded:
             self.dataset.load_dataset()
         assert self.dataset.dataset_loaded ==True, "Dataset is not loaded"
-        ageGenderModel = self.get_model_with_labels(["age_estimation","gender_probablity"])
+        ageGenderModel = self.get_model_with_labels(["age_estimation","gender_probability"])
         if self.freeze:
             for i in range(len(ageGenderModel.layers)):
-                if ageGenderModel.layers[i].name in ["age_estimation","gender_probablity","dense_4","dense_5","dense_6","dense_7"] :
+                if ageGenderModel.layers[i].name in ["age_estimation","gender_probability","dense_4","dense_5","dense_6","dense_7"] :
                     ageGenderModel.layers[i].trainable = True
                     print (ageGenderModel.layers[i].name, "trainable == True")
                 else:
@@ -124,10 +123,10 @@ class AllInOneNetwork(object):
         self.model.save_weights("models/"+self.large_model_name+".h5")
         smileModel.save_weights("models/"+self.small_model_name+".h5")
 
-    def save_model(self,model,score):
+    def save_model(self,model,score=None):
         self.model.model.save_weights("models/"+self.config.large_model_name+".h5")
         model.save_weights("models/"+self.config.small_model_name+".h5")
-        print("Score:",score)
+        # print("Score:",score)
         #with open("logs/logs.txt", "a+") as log_file:
         #    log_file.write("----------------------------------------\n")
         #    log_file.write("large model _name:"+(self.config.large_model_name)+"\n")
@@ -137,37 +136,46 @@ class AllInOneNetwork(object):
 
     def train_age_network(self):
         age_model = self.model.get_model_with_labels(["age_estimation"])
+        age_model.summary()
         dataset = self.getDatasetFromString(self.config)
         if not dataset.dataset_loaded:
             dataset.load_dataset()
         X_test = dataset.test_dataset_images
         X_test = X_test.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
-        age_test = dataset.test_dataset["age"].as_matrix()
-        age_model.compile(loss=occ, 
-                            optimizer=keras.optimizers.Adam(self.config.getLearningRate()), 
+        age_test = dataset.test_dataset["age"].values
+        age_test = np.stack(age_test)
+        # age_test = np.array(age_test)
+
+        age_model.compile(loss="binary_crossentropy", 
+                            optimizer=keras.optimizers.Adam(self.config.getLearningRate()),
                             metrics=["accuracy"])
         # callbacks = [LambdaUpdateCallBack()]
-        age_model.summary()
         # X_test = np.array(X_test, dtype='float32')
         # age_test = np.array(age_test, dtype='float32')
-        print(X_test.shape)
-        print(age_test.shape)
-        print(self.config.steps_per_epoch)
-        # exit(0)
+        save_callback = SaveCallBack(self.model.model, self.config.small_model_name, self.config.large_model_name)
         age_model.fit_generator(dataset.age_data_generator(self.config.batch_size),
                 epochs=self.config.epochs,
                 steps_per_epoch=self.config.steps_per_epoch,
                 validation_data=dataset.age_val_generator(self.config.batch_size),
                 #validation_data=[X_test, age_test],
-                validation_steps=15
-                # callbacks = callbacks
+                validation_steps=15,
+                callbacks = [save_callback]
+                #use_multiprocessing=True,
+               # workers=9
         )
-        score = age_model.evaluate(X_test, age_test)
-        self.save_model(age_model,score)
+        # score = age_model.evaluate(X_test, age_test)
+        # print("Test score", score)
+        # serialize model to JSON
+        model_json = self.model.model.to_json()
+        with open("model.json", "w") as json_file:
+            json_file.write(model_json)
+
+        self.save_model(age_model)
+        # self.save_model(age_model, score)
 
 
     def train_gender_network(self):
-        gender_model = self.model.get_model_with_labels(["gender_probablity"])
+        gender_model = self.model.get_model_with_labels(["gender_probability"])
         dataset = self.getDatasetFromString(self.config)
         if not dataset.dataset_loaded:
             dataset.load_dataset()
@@ -178,7 +186,7 @@ class AllInOneNetwork(object):
         gender_model.compile(loss = keras.losses.binary_crossentropy,optimizer=keras.optimizers.Adam(self.config.getLearningRate()),metrics=["accuracy"])
         callbacks = None
         gender_model.summary()
-        gender_model.fit_generator(dataset.gender_data_genenerator(self.config.batch_size),
+        gender_model.fit_generator(dataset.gender_data_generator(self.config.batch_size),
                 epochs = self.config.epochs,
                 steps_per_epoch = self.config.steps_per_epoch,
                 validation_data = [X_test,gender_test],
@@ -222,7 +230,7 @@ class AllInOneNetwork(object):
             raise NotImplementedError("Not implemented for "+str(config.dataset))
 
     def train_face_detection_network(self):
-        face_detection_model = self.model.get_model_with_labels(["detection_probablity"])
+        face_detection_model = self.model.get_model_with_labels(["detection_probability"])
         dataset = self.getDatasetFromString(self.config)
         if not dataset.dataset_loaded:
             dataset.load_dataset()
@@ -233,7 +241,7 @@ class AllInOneNetwork(object):
         face_detection_model.compile(loss = keras.losses.binary_crossentropy,optimizer=keras.optimizers.Adam(self.config.getLearningRate()),metrics=["accuracy"])
         callbacks = None
         face_detection_model.summary()
-        face_detection_model.fit_generator(dataset.detection_data_genenerator(self.config.batch_size),
+        face_detection_model.fit_generator(dataset.detection_data_generator(self.config.batch_size),
                 epochs = self.config.epochs,
                 steps_per_epoch = self.config.steps_per_epoch,
                 validation_data = [X_test,detection_test],
@@ -264,14 +272,14 @@ class AllInOneNetwork(object):
         score = pose_model.evaluate(X_test,key_points)
         self.save_model(key_points_model,score)
 
-    def train_key_points_visiblity_network(self):
-        key_points_visibliity_model = self.model.get_model_with_labels(["key_points_visiblity"])
+    def train_key_points_visibility_network(self):
+        key_points_visibliity_model = self.model.get_model_with_labels(["key_points_visibility"])
         dataset = self.getDatasetFromString(self.config)
         if not dataset.dataset_loaded:
             dataset.load_dataset()
         X_test = dataset.test_dataset_images
         X_test = X_test.reshape(-1,self.config.image_shape[0],self.config.image_shape[1],self.config.image_shape[2])
-        key_points_visibility_test = dataset.test_dataset["key_points_visiblity"].as_matrix().astype(np.uint8)
+        key_points_visibility_test = dataset.test_dataset["key_points_visibility"].as_matrix().astype(np.uint8)
         key_points_visibility_test  = np.eye(2)[key_points_visibility_test]
         pose_model.compile(loss = keras.losses.binary_crossentropy,optimizer=keras.optimizers.Adam(self.config.getLearningRate()),metrics=["accuracy"])
         callbacks = None
@@ -340,8 +348,8 @@ class AllInOneNetwork(object):
             self.train_face_detection_network()
         elif label == "key_points":
             self.train_key_points_localization_network()
-        elif label == "key_points_visiblity":
-            self.train_key_points_visiblity_network()
+        elif label == "key_points_visibility":
+            self.train_key_points_visibility_network()
         elif label == "identification":
             self.train_face_recognition_network()
         elif label == "pose":

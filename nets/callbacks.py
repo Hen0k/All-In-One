@@ -2,6 +2,28 @@ import keras
 import json
 
 from nets.loss_functions import LAMDA
+from nets import model
+class SaveCallBack(keras.callbacks.Callback):
+    def __init__(self, large_model, sname, lname, *args, **kwargs):
+        self.large_model = large_model
+        self.large_model_name = lname
+        self.small_model_name = sname
+        super().__init__()
+    def on_epoch_end(self, epoch, logs=None):
+        with open("models/log.txt", "a+") as log:
+            log.write("Epoch: {}\nTraining Loss: {}\tTraining Accuracy: {}\nValidation Loss: {}\tValidation Accuracy: {}".format(epoch, logs['loss'], logs['acc'], logs['val_loss'], logs['val_acc']))
+        # serialize model to JSON
+        small_model_json = self.model.to_json()
+        with open("models/small_model.json", 'w') as json_file:
+            json_file.write(small_model_json)
+        
+        large_model_json = self.large_model.to_json()        
+        with open("models/large_model.json", 'w') as json_file:
+            json_file.write(large_model_json)
+
+        self.large_model.save_weights("models/"+self.large_model_name +  ".h5")
+        self.model.save_weights("models/"+self.small_model_name+".h5")
+
 
 class LambdaUpdateCallBack(keras.callbacks.Callback):
     def on_batch_end(self, batch, logs={}):

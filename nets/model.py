@@ -64,9 +64,10 @@ class AllInOneModel(object):
         # age_estimation1 = Dense(1024,activation="relu")(conv6_out_pool_flatten)
         # age_drop1 = Dropout(0.2)(age_estimation1)
         age_estimation2 = Dense(128,activation="relu")(conv6_out_pool_flatten)
-        # age_drop2 = Dropout(0.2)(age_estimation2)
-        # age_estimation3 = Dense(1, activation="linear", name="age_estimation")(age_drop2)
-        age_estimation3 = AgeBinaryClassifiers(128, name="age_estimation")(age_estimation2)
+        age_drop2 = Dropout(0.2)(age_estimation2)
+        age_estimation3 = Dense(1024, activation="relu")(age_drop2)
+        age_drop2 = Dropout(0.2)(age_estimation3)
+        age_estimation3 = Dense(128, name="age_estimation", activation="sigmoid")(age_drop2)
         # age_estimation4 = RoundLayer(name="age_estimation")(age_estimation3)
         # gender probablity
 

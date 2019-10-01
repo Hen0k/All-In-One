@@ -16,7 +16,7 @@ class All_In_OneServicer(all_in_one_pb2_grpc.All_In_OneServicer):
             raise InvalidParams("Image type is required")
 
         temp_responce = all_in_one.predict_image(request.image, request.image_type)
-
+        
         bounding_box_list = []
         age_list = []
         smile_list = []
@@ -24,7 +24,8 @@ class All_In_OneServicer(all_in_one_pb2_grpc.All_In_OneServicer):
         for temp_responce_element in temp_responce:
             bounding_box_list.append(all_in_one_pb2.BoundingBox(x=temp_responce_element[0], y=temp_responce_element[1],
                                                                 w=temp_responce_element[2], h=temp_responce_element[3]))
-            age_list.append(int(temp_responce_element[4]))
+            
+            age_list.append(temp_responce_element[4].sum())
             smile_list.append(temp_responce_element[5])
             gender_list.append(temp_responce_element[6])
 

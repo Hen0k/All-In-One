@@ -5,7 +5,8 @@ import os
 from keras.models import model_from_json, Model
 import tempfile
 import base64
-
+from nets.layers import AgeBinaryClassifiers
+import keras.backend as K
 
 def get_layer(model, name):
     for layer in model.layers:
@@ -18,6 +19,7 @@ def load_model(model_json_path, model_h5_path, layer_names):
     with open(model_json_path, "r") as json_file:
         model = model_from_json(json_file.read())
         model.load_weights(model_h5_path)
+        model.summary()
         layer_output = []
         for lname in layer_names:
             layer_output += [get_layer(model, lname).output]
@@ -28,9 +30,9 @@ def load_model(model_json_path, model_h5_path, layer_names):
 
 def predict_image(image_64, image_type='RGB'):
     model = load_model("models/allinone.json", "models/allinone.h5", ["age_estimation", "smile", "gender_probablity"])
-
+    #model = load_model("models/large_model.json", "models/output-of-large-model.h5", ["smile", "gender_probablity", "age_estimation"])
     binary_image = base64.b64decode(image_64)
-
+    model.summary()
     f = tempfile.NamedTemporaryFile()
     f.write(binary_image)
 
@@ -50,13 +52,18 @@ def predict_image(image_64, image_type='RGB'):
         face_image = image[face.top():face.bottom(), face.left():face.right()]
         face_image = cv2.resize(face_image, (227, 227))
         face_image = face_image.astype(np.float32) / 255
+        # face_image =  cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
         predictions = model.predict(face_image.reshape(-1, 227, 227, 3))
         image = cv2.rectangle(image, (face.left(), face.top()), (face.right(), face.bottom()), (255, 0, 0), thickness=3)
-        age_estimation = predictions[0][0]
+        
+        age_estimation = predictions[2][0]
+        age_estimation = (age_estimation>0.5).astype(np.uint32)
+
         smile_detection = predictions[1][0]
         gender_probablity = predictions[2][0]
 
-        age = np.argmax(age_estimation)
+        #age = np.argmax(age_estimation)
+        age = age_estimation
         smile = np.argmax(smile_detection)
         gender = np.argmax(gender_probablity)
 
@@ -69,6 +76,8 @@ def predict_image(image_64, image_type='RGB'):
         else:
             gender = "Male"
         all_in_one_reslut.append([face.top(), face.bottom(), face.left(), face.right(), age, smile, gender])
+    del model
+    K.clear_session()
     return all_in_one_reslut
 
 # with open("imgs/adele.png", 'rb') as f:
@@ -76,3 +85,23 @@ def predict_image(image_64, image_type='RGB'):
 #     image_64 = base64.b64encode(img).decode('utf-8')
 #
 # predict_image(image_64=image_64)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

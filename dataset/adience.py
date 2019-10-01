@@ -85,15 +85,15 @@ class AdienceDataset(Dataset):
         # Calculate norm
         rv = norm(loc=mean, scale=std)
         # Get PDF for each value
-        pdf_values = [rv.pdf(num) for num in age_range]
+        pdf_values = [rv.pdf(n) for n in age_range]
         # Calclate softmax
-        arr_softmax = softmax(pdf_values).reshape(len(age_range), 1)
+        weights = softmax(pdf_values)#.reshape(len(age_range), 1)
         # Multiply with encoding
-        array = arr_softmax * encoded
+        array = np.matmul(weights ,encoded)
         # take the sum along the 0 axis
         # array = array.sum(0)
         # Convert to a Tensor
-        array = tf.convert_to_tensor(array,dtype=tf.float32)
+        array = tf.convert_to_tensor(array, dtype=tf.float32)
         return array
 
     def resize_down_image(self,img,max_img_shape):
@@ -246,8 +246,9 @@ class AdienceDataset(Dataset):
             self.test_dataset = self.test_dataset.iloc[test_indexes].reset_index(drop=True)
             self.validation_dataset = self.validation_dataset.iloc[validation_indexes].reset_index(drop=True)
 
-            self.test_dataset = self.test_dataset[:1000]
-            self.validation_dataset = self.validation_dataset[:100]
+            # self.test_dataset = self.test_dataset[:1000]
+            # self.validation_dataset = self.validation_dataset[:100]
+
             Log.DEBUG_OUT = True
             Log.DEBUG("Loading test images")
             Log.DEBUG_OUT =False
@@ -309,7 +310,7 @@ class AdienceDataset(Dataset):
 
                 # age = self.get_column(current_dataframe,"age").astype(str)
                 age = np.array(self.get_column(current_dataframe,"age").tolist())
-
+                # print(X)
                 # Maybe do a list return instead of a string
                 yield X,age
     def age_val_generator(self, batch_size=32):
@@ -336,15 +337,15 @@ class AdienceDataset(Dataset):
             file_location = os.path.join(imgs_folder, row["file_location"])
             # file_location = row["file_location"]
             img = cv2.imread(file_location)
-
             if img is None:
                 print("Unable to read image from ",file_location)
                 continue
-            img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            img = cv2.resize(img,(self.config.image_shape[0],self.config.image_shape[1]))
+            # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            # img = cv2.resize(img,(self.config.image_shape[0],self.config.image_shape[1]))
             # img = np.array(Image.fromarray(img).resize(self.config.image_shape[0], self.config.image_shape[1])).astype(np.float32)/255
             # img = scipy.misc.imresize(img, (self.config.image_shape[0], self.config.image_shape[1])).astype(np.float32)/255
-            output_images[index] = img.reshape(self.config.image_shape)
+            output_images[index] = cv2.resize(img, self.config.image_shape[:2])
+            # output_images[index] = img
         return output_images
 
     def meet_convention(self):

@@ -118,7 +118,7 @@ def get_cmd_args():
 
 
 def get_config(args):
-    config = Config(args.dataset,args.images_path,(227,227,1))
+    config = Config(args.dataset,args.images_path,(227,227,3))
     config.batch_size = args.batch_size
     config.epochs = args.epochs
     config.lr = args.lr
